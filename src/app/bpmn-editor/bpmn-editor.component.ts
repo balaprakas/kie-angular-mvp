@@ -117,9 +117,11 @@ export class BpmnEditorComponent implements OnInit, OnDestroy {
       this.editor = await BpmnEditor.open({
         container: this.bpmnContainer.nativeElement,
         initialContent: Promise.resolve(''),
+        readOnly: false,
+        resources: new Map([])
       });
 
-      console.log('BPMN Editor initialized successfully');
+      console.log('BPMN Editor initialized successfully with readOnly: false');
     } catch (error) {
       console.error('Failed to initialize BPMN Editor:', error);
       this.bpmnContainer.nativeElement.innerHTML = `
