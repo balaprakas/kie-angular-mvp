@@ -117,9 +117,11 @@ export class DmnEditorComponent implements OnInit, OnDestroy {
       this.editor = await DmnEditor.open({
         container: this.dmnContainer.nativeElement,
         initialContent: Promise.resolve(''),
+        readOnly: false,
+        resources: new Map([])
       });
 
-      console.log('DMN Editor initialized successfully');
+      console.log('DMN Editor initialized successfully with readOnly: false');
     } catch (error) {
       console.error('Failed to initialize DMN Editor:', error);
       this.dmnContainer.nativeElement.innerHTML = `
