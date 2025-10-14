@@ -1,13 +1,28 @@
 import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/core';
+import { CommonModule } from '@angular/common';
 
 @Component({
   selector: 'app-bpmn-editor',
   standalone: true,
+  imports: [CommonModule],
   template: `
     <div class="editor-container">
       <div class="editor-header">
         <h2>BPMN Editor</h2>
         <p>Business Process Model and Notation Editor</p>
+        <div class="editor-controls">
+          <input
+            #fileInput
+            type="file"
+            accept=".bpmn,.bpmn2"
+            (change)="onFileSelected($event)"
+            style="display: none"
+          />
+          <button class="load-button" (click)="fileInput.click()">
+            📁 Load BPMN File
+          </button>
+          <span class="file-name" *ngIf="loadedFileName">{{ loadedFileName }}</span>
+        </div>
       </div>
       <div class="editor-wrapper">
         <div #bpmnContainer class="bpmn-editor" id="bpmn-editor-container"></div>
@@ -40,9 +55,43 @@ import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/co
     }
 
     .editor-header p {
-      margin: 0;
+      margin: 0 0 1rem 0;
       color: #6c757d;
       font-size: 1rem;
+    }
+
+    .editor-controls {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 1rem;
+      margin-top: 1rem;
+    }
+
+    .load-button {
+      background: #3498db;
+      color: white;
+      border: none;
+      padding: 0.75rem 1.5rem;
+      border-radius: 6px;
+      font-size: 1rem;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background-color 0.3s ease;
+    }
+
+    .load-button:hover {
+      background: #2980b9;
+    }
+
+    .load-button:active {
+      background: #21618c;
+    }
+
+    .file-name {
+      color: #27ae60;
+      font-weight: 500;
+      font-size: 0.9rem;
     }
 
     .editor-wrapper {
@@ -109,14 +158,53 @@ import { Component, OnInit, OnDestroy, ElementRef, ViewChild } from '@angular/co
 export class BpmnEditorComponent implements OnInit, OnDestroy {
   @ViewChild('bpmnContainer', { static: true }) bpmnContainer!: ElementRef;
   private editor: any;
+  protected loadedFileName: string = '';
+  private fileContent: string = '';
 
   async ngOnInit() {
+    await this.initializeEditor('');
+  }
+
+  async onFileSelected(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input.files && input.files.length > 0) {
+      const file = input.files[0];
+      this.loadedFileName = file.name;
+
+      try {
+        this.fileContent = await this.readFileContent(file);
+        console.log('File loaded successfully:', file.name);
+        
+        await this.reinitializeEditor(this.fileContent);
+      } catch (error) {
+        console.error('Error reading file:', error);
+        alert(`Failed to load file: ${error}`);
+        this.loadedFileName = '';
+      }
+    }
+  }
+
+  private readFileContent(file: File): Promise<string> {
+    return new Promise((resolve, reject) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const content = e.target?.result as string;
+        resolve(content);
+      };
+      reader.onerror = () => {
+        reject(new Error('Failed to read file'));
+      };
+      reader.readAsText(file);
+    });
+  }
+
+  private async initializeEditor(content: string) {
     try {
       const BpmnEditor = await import('@kie-tools/kie-editors-standalone/dist/bpmn');
       
       this.editor = await BpmnEditor.open({
         container: this.bpmnContainer.nativeElement,
-        initialContent: Promise.resolve(''),
+        initialContent: Promise.resolve(content),
         readOnly: false,
         resources: new Map([])
       });
@@ -132,6 +220,19 @@ export class BpmnEditorComponent implements OnInit, OnDestroy {
         </div>
       `;
     }
+  }
+
+  private async reinitializeEditor(content: string) {
+    if (this.editor) {
+      try {
+        await this.editor.close();
+      } catch (error) {
+        console.error('Error closing existing editor:', error);
+      }
+    }
+    
+    this.bpmnContainer.nativeElement.innerHTML = '';
+    await this.initializeEditor(content);
   }
 
   ngOnDestroy() {
