@@ -200,9 +200,16 @@ export class DmnEditorComponent implements OnInit, OnDestroy {
 
   private async initializeEditor(content: string) {
     try {
-      const DmnEditor = await import('@kie-tools/kie-editors-standalone/dist/dmn');
+      const DmnEditorModule = await import('@kie-tools/kie-editors-standalone/dist/dmn');
+      const DmnEditor = (DmnEditorModule as any).default || DmnEditorModule;
       
-      this.editor = await DmnEditor.open({
+      const openFunction = DmnEditor.open || (DmnEditor as any).open$1;
+      
+      if (!openFunction) {
+        throw new Error('Unable to find open function in DMN Editor module');
+      }
+      
+      this.editor = await openFunction({
         container: this.dmnContainer.nativeElement,
         initialContent: Promise.resolve(content),
         readOnly: false,

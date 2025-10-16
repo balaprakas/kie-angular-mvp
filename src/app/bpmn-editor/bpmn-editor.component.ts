@@ -200,9 +200,16 @@ export class BpmnEditorComponent implements OnInit, OnDestroy {
 
   private async initializeEditor(content: string) {
     try {
-      const BpmnEditor = await import('@kie-tools/kie-editors-standalone/dist/bpmn');
+      const BpmnEditorModule = await import('@kie-tools/kie-editors-standalone/dist/bpmn');
+      const BpmnEditor = (BpmnEditorModule as any).default || BpmnEditorModule;
       
-      this.editor = await BpmnEditor.open({
+      const openFunction = BpmnEditor.open || (BpmnEditor as any).open$1;
+      
+      if (!openFunction) {
+        throw new Error('Unable to find open function in BPMN Editor module');
+      }
+      
+      this.editor = await openFunction({
         container: this.bpmnContainer.nativeElement,
         initialContent: Promise.resolve(content),
         readOnly: false,
